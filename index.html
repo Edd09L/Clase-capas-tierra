@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modelo Interactivo Accesible: Capas Internas de la Tierra</title>
+    <style>
+        /* CSS Reset & Variable Design System */
+        :root {
+            --bg-color: #0d0f12;
+            --text-color: #ffffff;
+            --card-bg: #1a1d24;
+            --border-color: #333947;
+            --focus-ring: #00e5ff;
+            --active-item: #ffee00;
+            --accent-color: #ff9100;
+            --button-bg: #2a2f3d;
+            --button-text: #ffffff;
+            --font-scale: 1;
+            
+            /* High Contrast Layer Colors */
+            --corteza-color: #8d4925;
+            --manto-sup-color: #ff5722;
+            --manto-inf-color: #e65100;
+            --nucleo-ext-color: #ffb300;
+            --nucleo-int-color: #ffff00;
+        }
+
+        /* High Contrast Themes */
+        body.theme-yellow-black {
+            --bg-color: #000000;
+            --text-color: #ffff00;
+            --card-bg: #000000;
+            --border-color: #ffff00;
+            --focus-ring: #ffffff;
+            --active-item: #ffffff;
+            --accent-color: #ffff00;
+            --button-bg: #111100;
+            --button-text: #ffff00;
+        }
+
+        body.theme-light {
+            --bg-color: #f4f6f9;
+            --text-color: #111827;
+            --card-bg: #ffffff;
+            --border-color: #d1d5db;
+            --focus-ring: #2563eb;
+            --active-item: #1d4ed8;
+            --accent-color: #c2410c;
+            --button-bg: #e5e7eb;
+            --button-text: #111827;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            font-size: calc(18px * var(--font-scale));
+            transition: background-color 0.3s, color 0.3s;
+            padding: 20px;
+        }
+
+        /* Skip Navigation link for screen readers */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--focus-ring);
+            color: #000;
+            padding: 8px 16px;
+            z-index: 100;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .skip-link:focus {
+            top: 0;
+        }
+
+        header {
+            border-bottom: 3px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            font-size: calc(1.8rem * var(--font-scale));
+            margin-bottom: 10px;
+        }
+
+        /* Toolbar Controls for Accessibility */
+        .accessibility-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            background-color: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            margin-bottom: 25px;
+            align-items: center;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-label {
+            font-weight: bold;
+            font-size: calc(0.9rem * var(--font-scale));
+        }
+
+        button, select {
+            font-family: inherit;
+            font-size: calc(0.95rem * var(--font-scale));
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: 2px solid var(--border-color);
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            cursor: pointer;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.1s, border-color 0.2s;
+        }
+
+        button:hover, select:hover {
+            border-color: var(--focus-ring);
+        }
+
+        button:focus-visible, select:focus-visible, svg path:focus-visible, .layer-item:focus-visible {
+            outline: 4px solid var(--focus-ring);
+            outline-offset: 3px;
+        }
+
+        /* Main Grid Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+
+        @media (min-width: 900px) {
+            .main-container {
+                grid-template-columns: 1.1fr 0.9fr;
+            }
+        }
+
+        /* Visual Model Panel */
+        .interactive-panel {
+            background-color: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .svg-container {
+            width: 100%;
+            max-width: 450px;
+            height: auto;
+            margin: 0 auto;
+        }
+
+        /* SVG Layers styling and accessibility hover */
+        .earth-layer {
+            cursor: pointer;
+            transition: opacity 0.2s, stroke-width 0.2s, filter 0.2s;
+            stroke: #000;
+            stroke-width: 2px;
+        }
+
+        .earth-layer:hover, .earth-layer.active {
+            stroke: var(--focus-ring);
+            stroke-width: 6px;
+            filter: drop-shadow(0 0 10px var(--focus-ring));
+        }
+
+        /* Information Panel */
+        .info-panel {
+            background-color: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .layer-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: calc(0.9rem * var(--font-scale));
+            margin-bottom: 10px;
+            background-color: var(--button-bg);
+            border: 1px solid var(--border-color);
+        }
+
+        .layer-title {
+            font-size: calc(1.6rem * var(--font-scale));
+            color: var(--text-color);
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .info-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .data-box {
+            background-color: rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .data-label {
+            font-size: calc(0.85rem * var(--font-scale));
+            opacity: 0.85;
+            font-weight: bold;
+            display: block;
+        }
+
+        .data-value {
+            font-size: calc(1rem * var(--font-scale));
+            font-weight: 600;
+        }
+
+        .layer-description {
+            font-size: calc(1.05rem * var(--font-scale));
+            margin-bottom: 25px;
+            line-height: 1.7;
+        }
+
+        /* Audio Controls Box */
+        .audio-controls {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Layer selector list for screen reader fallback */
+        .layer-list-nav {
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .layer-btn-nav {
+            font-size: calc(0.85rem * var(--font-scale));
+        }
+
+        .layer-btn-nav.active {
+            background-color: var(--focus-ring);
+            color: #000000;
+            font-weight: bold;
+        }
+
+        /* Quick Guide Accordion */
+        .evaluator-guide {
+            margin-top: 35px;
+            background-color: var(--card-bg);
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .evaluator-guide summary {
+            font-weight: bold;
+            cursor: pointer;
+            font-size: calc(1.1rem * var(--font-scale));
+        }
+
+        .evaluator-guide ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .evaluator-guide li {
+            margin-bottom: 8px;
+        }
+    </style>
+</head>
+<body>
+    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+    <header>
+        <h1>Explorador Accesible: Capas Internas de la Tierra</h1>
+        <p>Recurso neurodidáctico adaptado para estudiantes con baja visión mediante estímulos visuales de alto contraste y audio descriptivo.</p>
+    </header>
+
+    <!-- Toolbar de Accesibilidad -->
+    <section class="accessibility-toolbar" aria-label="Controles de accesibilidad">
+        <div class="toolbar-group">
+            <label for="theme-select" class="toolbar-label">Tema Visual:</label>
+            <select id="theme-select" aria-label="Seleccionar tema visual de alto contraste">
+                <option value="default">Alto Contraste Oscuro</option>
+                <option value="yellow-black">Amarillo sobre Negro</option>
+                <option value="light">Modo Claro Suave</option>
+            </select>
+        </div>
+
+        <div class="toolbar-group">
+            <span class="toolbar-label">Tamaño de Texto (Macrotipo):</span>
+            <button id="btn-zoom-in" aria-label="Aumentar tamaño de texto">A+ Aumentar</button>
+            <button id="btn-zoom-out" aria-label="Disminuir tamaño de texto">A- Disminuir</button>
+            <button id="btn-zoom-reset" aria-label="Restablecer tamaño de texto">Restablecer</button>
+        </div>
+
+        <div class="toolbar-group">
+            <label for="rate-select" class="toolbar-label">Velocidad de Voz:</label>
+            <select id="rate-select" aria-label="Seleccionar velocidad de la voz del lector">
+                <option value="0.8">Lenta (0.8x)</option>
+                <option value="1" selected>Normal (1.0x)</option>
+                <option value="1.2">Rápida (1.2x)</option>
+            </select>
+        </div>
+    </section>
+
+    <!-- Contenido Principal -->
+    <main id="main-content" class="main-container">
+        <!-- Panel Izquierdo: Modelo Gráfico SVG Interactivo -->
+        <section class="interactive-panel" aria-label="Modelo gráfico tridimensional en corte transversal">
+            <h2 class="sr-only">Gráfico interactivo de la Tierra</h2>
+            
+            <div class="svg-container">
+                <svg viewBox="0 0 400 400" width="100%" height="100%" role="img" aria-labelledby="svg-title svg-desc">
+                    <title id="svg-title">Corte transversal de las capas de la Tierra</title>
+                    <desc id="svg-desc">Modelo circular interactivo en corte transversal con patrones y relieves visuales para distinguir la corteza, el manto superior, el manto inferior, el núcleo externo y el núcleo interno.</desc>
+                    
+                    <defs>
+                        <!-- Patrones visuales para sustituir/reforzar texturas -->
+                        <pattern id="pattern-corteza" width="10" height="10" patternUnits="userSpaceOnUse">
+                            <line x1="0" y1="0" x2="10" y2="10" stroke="#ffffff" stroke-width="2"/>
+                        </pattern>
+                        <pattern id="pattern-manto-sup" width="12" height="12" patternUnits="userSpaceOnUse">
+                            <circle cx="6" cy="6" r="3" fill="#000000" />
+                        </pattern>
+                        <pattern id="pattern-manto-inf" width="16" height="16" patternUnits="userSpaceOnUse">
+                            <rect x="2" y="2" width="12" height="12" fill="none" stroke="#000000" stroke-width="2"/>
+                        </pattern>
+                    </defs>
+
+                    <!-- Capa 1: Corteza -->
+                    <path id="svg-corteza" class="earth-layer" 
+                          d="M 200 10 A 190 190 0 1 1 199.9 10 Z" 
+                          fill="var(--corteza-color)" 
+                          tabindex="0" role="button" aria-pressed="false" 
+                          aria-label="Capa 1: Corteza Terrestre. Grosor de 5 a 70 kilómetros."/>
+                    
+                    <!-- Capa 2: Manto Superior -->
+                    <path id="svg-manto-superior" class="earth-layer" 
+                          d="M 200 40 A 160 160 0 1 1 199.9 40 Z" 
+                          fill="var(--manto-sup-color)" 
+                          tabindex="0" role="button" aria-pressed="false" 
+                          aria-label="Capa 2: Manto Superior. Profundidad de 70 a 670 kilómetros."/>
+                    
+                    <!-- Capa 3: Manto Inferior -->
+                    <path id="svg-manto-inferior" class="earth-layer" 
+                          d="M 200 75 A 125 125 0 1 1 199.9 75 Z" 
+                          fill="var(--manto-inf-color)" 
+                          tabindex="0" role="button" aria-pressed="false" 
+                          aria-label="Capa 3: Manto Inferior. Profundidad de 670 a 2900 kilómetros."/>
+
+                    <!-- Capa 4: Núcleo Externo -->
+                    <path id="svg-nucleo-externo" class="earth-layer" 
+                          d="M 200 120 A 80 80 0 1 1 199.9 120 Z" 
+                          fill="var(--nucleo-ext-color)" 
+                          tabindex="0" role="button" aria-pressed="false" 
+                          aria-label="Capa 4: Núcleo Externo. Estado líquido, profundidad de 2900 a 5150 kilómetros."/>
+
+                    <!-- Capa 5: Núcleo Interno -->
+                    <path id="svg-nucleo-interno" class="earth-layer" 
+                          d="M 200 165 A 35 35 0 1 1 199.9 165 Z" 
+                          fill="var(--nucleo-int-color)" 
+                          tabindex="0" role="button" aria-pressed="false" 
+                          aria-label="Capa 5: Núcleo Interno. Centro sólido de hierro y níquel."/>
+                </svg>
+            </div>
+
+            <!-- Botones de Navegación Alternativos para Teclado/Lector -->
+            <nav class="layer-list-nav" aria-label="Selección rápida de capa">
+                <button class="layer-btn-nav" data-layer="corteza">1. Corteza</button>
+                <button class="layer-btn-nav" data-layer="manto-superior">2. Manto Sup.</button>
+                <button class="layer-btn-nav" data-layer="manto-inferior">3. Manto Inf.</button>
+                <button class="layer-btn-nav" data-layer="nucleo-externo">4. Núcleo Ext.</button>
+                <button class="layer-btn-nav" data-layer="nucleo-interno">5. Núcleo Int.</button>
+            </nav>
+        </section>
+
+        <!-- Panel Derecho: Información y Lector de Voz Integrado -->
+        <section class="info-panel" aria-live="polite" aria-atomic="true">
+            <div>
+                <span id="info-badge" class="layer-badge">Capa Seleccionada</span>
+                <h2 id="info-title" class="layer-title">Selecciona una capa</h2>
+
+                <div class="info-data">
+                    <div class="data-box">
+                        <span class="data-label">Profundidad / Ubicación:</span>
+                        <span id="info-depth" class="data-value">-</span>
+                    </div>
+                    <div class="data-box">
+                        <span class="data-label">Textura Táctil Equivalente:</span>
+                        <span id="info-texture" class="data-value">-</span>
+                    </div>
+                    <div class="data-box">
+                        <span class="data-label">Estado Físico:</span>
+                        <span id="info-state" class="data-value">-</span>
+                    </div>
+                </div>
+
+                <p id="info-description" class="layer-description">
+                    Haz clic en cualquier sección del modelo tridimensional o utiliza las teclas Tab y Flechas para explorar las capas de la Tierra.
+                </p>
+            </div>
+
+            <!-- Controles de Audio Locución -->
+            <div class="audio-controls" aria-label="Controles del lector de pantalla integrado">
+                <button id="btn-speak" aria-label="Escuchar la descripción de la capa seleccionada en voz alta">
+                    🔊 Escuchar Descripción
+                </button>
+                <button id="btn-stop" aria-label="Detener o pausar la voz">
+                    ⏹️ Detener Voz
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Guía de Prueba para el Evaluador -->
+    <section class="evaluator-guide">
+        <details>
+            <summary>📋 Guía de Verificación y Uso Rápido (Para Docentes y Evaluadores)</summary>
+            <ul>
+                <li><strong>Navegación Táctil/Teclado:</strong> Presione la tecla <code>Tab</code> para desplazarse secuencialmente por cada capa. Utilice las flechas del teclado o <code>Enter</code> para activar.</li>
+                <li><strong>Lector de Voz Automático (Web Speech API):</strong> Al seleccionar una capa o presionar "Escuchar Descripción", el sistema leerá los datos adaptados y la equivalencia táctil.</li>
+                <li><strong>Ajuste de Macrotipo y Contraste:</strong> Use el selector de temas para alternar a "Amarillo sobre Negro" (ideal para baja visión severa) y los botones <code>A+ / A-</code> para adaptar la escala gráfica y de texto.</li>
+            </ul>
+        </details>
+    </section>
+
+    <script>
+        // Datos Estructurados de las Capas Internas de la Tierra
+        const earthLayersData = {
+            'corteza': {
+                title: '1. Corteza Terrestre',
+                badge: 'Capa Superficial Exterior',
+                depth: '0 a 70 km de profundidad',
+                state: 'Sólido rocoso frío',
+                texture: 'Rugosa y fina (como papel de lija fino o piedra pómez)',
+                description: 'Es la capa más delgada y externa de la Tierra. Está compuesta por rocas sólidas como el granito y el basalto. Forma los continentes y el fondo de los océanos. Equivale a la cáscara delgada de una manzana.'
+            },
+            'manto-superior': {
+                title: '2. Manto Superior',
+                badge: 'Capa Subsuperficial',
+                depth: '70 a 670 km de profundidad',
+                state: 'Sólido viscoso y semi-plástico',
+                texture: 'Estriada (como cartón corrugado o plastilina firme)',
+                description: 'Se ubica justo debajo de la corteza. Debido a las altas temperaturas, parte de sus rocas se encuentran en estado semifundido (astenosfera), permitiendo que las placas tectónicas se muevan lentamente sobre ella.'
+            },
+            'manto-inferior': {
+                title: '3. Manto Inferior',
+                badge: 'Capa Media Intermedia',
+                depth: '670 a 2,900 km de profundidad',
+                state: 'Sólido de alta densidad bajo presión',
+                texture: 'Relieve de rejilla (como malla plástica o tela de yute)',
+                description: 'Es la capa más gruesa de la geósfera. Aunque soporta temperaturas extremadamente elevadas, la enorme presión de las capas superiores mantiene sus minerales en estado sólido y rígido.'
+            },
+            'nucleo-externo': {
+                title: '4. Núcleo Externo',
+                badge: 'Capa Profunda Líquida',
+                depth: '2,900 a 5,150 km de profundidad',
+                state: 'Líquido en movimiento fluido',
+                texture: 'Lisa con brillo (como papel aluminio o hule denso)',
+                description: 'Compuesto principalmente por hierro y níquel en estado líquido hirviente. El movimiento constante de estos metales fundidos genera el campo magnético terrestre que protege nuestro planeta del viento solar.'
+            },
+            'nucleo-interno': {
+                title: '5. Núcleo Interno',
+                badge: 'Centro del Planeta',
+                depth: '5,150 a 6,371 km (Centro)',
+                state: 'Sólido metálico hiperdenso',
+                texture: 'Esférica lisa y compacta (como una esfera de madera o fieltro apretado)',
+                description: 'Es el corazón sólido de la Tierra. A pesar de estar a más de 5,000 grados Celsius (tan caliente como la superficie del Sol), la presión monumental impide que el hierro se derrita, manteniéndolo en una esfera sólida.'
+            }
+        };
+
+        // Estado Global de la Aplicación
+        let currentLayerId = 'corteza';
+        let fontScale = 1;
+        const synth = window.speechSynthesis;
+
+        // Elementos del DOM
+        const themeSelect = document.getElementById('theme-select');
+        const btnZoomIn = document.getElementById('btn-zoom-in');
+        const btnZoomOut = document.getElementById('btn-zoom-out');
+        const btnZoomReset = document.getElementById('btn-zoom-reset');
+        const rateSelect = document.getElementById('rate-select');
+
+        const infoTitle = document.getElementById('info-title');
+        const infoBadge = document.getElementById('info-badge');
+        const infoDepth = document.getElementById('info-depth');
+        const infoState = document.getElementById('info-state');
+        const infoTexture = document.getElementById('info-texture');
+        const infoDescription = document.getElementById('info-description');
+
+        const btnSpeak = document.getElementById('btn-speak');
+        const btnStop = document.getElementById('btn-stop');
+
+        // Inicialización al Cargar la Página
+        window.onload = function() {
+            setupEventListeners();
+            selectLayer('corteza', false); // Seleccionar la corteza por defecto sin hablar automáticamente
+        };
+
+        function setupEventListeners() {
+            // Eventos para las capas del SVG
+            document.querySelectorAll('.earth-layer').forEach(layer => {
+                layer.addEventListener('click', function() {
+                    const layerId = this.id.replace('svg-', '');
+                    selectLayer(layerId, true);
+                });
+
+                layer.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        const layerId = this.id.replace('svg-', '');
+                        selectLayer(layerId, true);
+                    }
+                });
+            });
+
+            // Eventos para los botones de navegación alternativos
+            document.querySelectorAll('.layer-btn-nav').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const layerId = this.getAttribute('data-layer');
+                    selectLayer(layerId, true);
+                });
+            });
+
+            // Cambios de Tema de Alto Contraste
+            themeSelect.addEventListener('change', function() {
+                document.body.className = '';
+                if (this.value !== 'default') {
+                    document.body.classList.add(`theme-${this.value}`);
+                }
+            });
+
+            // Controles de Tamaño de Texto (Macrotipo)
+            btnZoomIn.addEventListener('click', () => adjustFontScale(0.15));
+            btnZoomOut.addEventListener('click', () => adjustFontScale(-0.15));
+            btnZoomReset.addEventListener('click', () => {
+                fontScale = 1;
+                document.documentElement.style.setProperty('--font-scale', fontScale);
+            });
+
+            // Controles del Lector de Voz
+            btnSpeak.addEventListener('click', () => speakCurrentLayer());
+            btnStop.addEventListener('click', () => stopSpeech());
+        }
+
+        // Selección de Capa e Actualización de la Interfaz
+        function selectLayer(layerId, triggerSpeech = false) {
+            if (!earthLayersData[layerId]) return;
+
+            currentLayerId = layerId;
+            const data = earthLayersData[layerId];
+
+            // Actualizar datos del panel de información
+            infoTitle.textContent = data.title;
+            infoBadge.textContent = data.badge;
+            infoDepth.textContent = data.depth;
+            infoState.textContent = data.state;
+            infoTexture.textContent = data.texture;
+            infoDescription.textContent = data.description;
+
+            // Actualizar clases activas en SVG y botones
+            document.querySelectorAll('.earth-layer').forEach(el => {
+                const isSelected = el.id === `svg-${layerId}`;
+                el.classList.toggle('active', isSelected);
+                el.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            });
+
+            document.querySelectorAll('.layer-btn-nav').forEach(btn => {
+                const isSelected = btn.getAttribute('data-layer') === layerId;
+                btn.classList.toggle('active', isSelected);
+            });
+
+            // Reproducir síntesis de voz si fue activado por el usuario
+            if (triggerSpeech) {
+                speakCurrentLayer();
+            }
+        }
+
+        // Modificador de Escala Tipográfica (Zoom Macrotipo)
+        function adjustFontScale(delta) {
+            fontScale = Math.min(Math.max(fontScale + delta, 0.8), 1.8);
+            document.documentElement.style.setProperty('--font-scale', fontScale);
+        }
+
+        // Motor de Lectura de Pantalla Integrado (Web Speech API)
+        function speakCurrentLayer() {
+            if (!synth) {
+                alert('Su navegador no soporta síntesis de voz nativa.');
+                return;
+            }
+
+            stopSpeech(); // Detener cualquier locución previa
+
+            const data = earthLayersData[currentLayerId];
+            const textToSpeak = `${data.title}. ${data.badge}. Profundidad: ${data.depth}. Estado físico: ${data.state}. Equivalencia táctil: ${data.texture}. Descripción: ${data.description}`;
+
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            utterance.lang = 'es-ES';
+            utterance.rate = parseFloat(rateSelect.value) || 1.0;
+
+            synth.speak(utterance);
+        }
+
+        function stopSpeech() {
+            if (synth && synth.speaking) {
+                synth.cancel();
+            }
+        }
+    </script>
+</body>
+</html>
